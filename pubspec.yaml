@@ -35,6 +35,8 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
   get: any
+  google_place: ^0.4.7
+  location: ^4.4.0
 
 dev_dependencies:
   flutter_test:
