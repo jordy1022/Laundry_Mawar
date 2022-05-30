@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:location/location.dart' as loc;
 import 'package:get/get.dart';
+import 'package:google_place/google_place.dart' as gp;
 import 'package:laundry_mawar/cucibasah.dart';
 import 'package:laundry_mawar/drycleaning.dart';
 import 'package:laundry_mawar/sepatu.dart';
@@ -14,6 +16,40 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+   Future getNearbyLaundry() async {
+    loc.Location location = loc.Location();
+
+    bool serviceEnabled;
+    PermissionStatus permissionGranted;
+    LocationData locationData;
+
+    serviceEnabled = await location.serviceEnabled();
+    if (!serviceEnabled) {
+      serviceEnabled = await location.requestService();
+      if (!serviceEnabled) {
+        return;
+      }
+    }
+
+    permissionGranted = await location.hasPermission();
+    if (permissionGranted == PermissionStatus.denied) {
+      permissionGranted = await location.requestPermission();
+      if (permissionGranted != PermissionStatus.granted) {
+        return;
+      }
+    }
+
+    locationData = await location.getLocation();
+
+    var googlePlace = gp.GooglePlace("AIzaSyBCtzBnPcyAW4lMW8o_J6Ur4x-IQkvwuT8");
+    var result = await googlePlace.search.getNearBySearch(
+        gp.Location(lat: locationData.latitude, lng: locationData.longitude),
+        2000,
+        keyword: "laundry");
+
+    return result;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -279,6 +315,33 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
               ),
+             const SizedBox(
+                height: 20,
+              ),
+              FutureBuilder(
+                  future: getNearbyLaundry(),
+                  builder: (_, snapshot) {
+                    if (snapshot.hasError) {
+                      return Center(
+                          child: Text("Fail to load data : ${snapshot.error}"));
+                    } else if (snapshot.hasData) {
+                      var data = snapshot.data as gp.NearBySearchResponse;
+                      var results = data.results;
+                      return ListView.builder(
+                          itemCount: results!.length,
+                          shrinkWrap: true,
+                          physics: const ClampingScrollPhysics(),
+                          itemBuilder: (context, index) {
+                            var obj = results[index];
+                            return Card(
+                              child:
+                                  Text("${obj.name!}\nRating : ${obj.rating}"),
+                            );
+                          });
+                    } else {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                  }),
             ],
           ),
         ),
